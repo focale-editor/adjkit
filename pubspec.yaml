@@ -1,0 +1,35 @@
+name: adjkit
+description: A pure Dart codec for Adobe Photoshop Levels, Hue/Saturation, Selective Color, and Channel Mixer presets.
+version: 0.1.0
+homepage: https://github.com/focale-editor/adjkit
+repository: https://github.com/focale-editor/adjkit
+
+topics:
+  - photoshop
+  - adjustments
+  - presets
+  - codec
+  - file-format
+
+screenshots:
+  - description: 'A flat illustration of Photoshop adjustment presets with three settings sliders.'
+    path: screenshots/overview.png
+
+environment:
+  sdk: '>=3.13.0 <4.0.0'
+
+dependencies:
+  pscore: '>=0.1.6 <0.2.0'
+
+dev_dependencies:
+  analyzer: ^14.5.0
+  checks: ^0.3.2
+  lints: ^6.1.0
+  release: ^0.1.11
+  test: ^1.32.0
+
+release:
+  changelog:
+    header: '# 📰 AdjKit changelog'
+    defaultIgnoredTypes: ['test']
+    defaultIgnoredScopes: ['repo', 'docs', 'version', 'deps', 'tools']
