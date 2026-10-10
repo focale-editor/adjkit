@@ -6,7 +6,7 @@ This document describes the binary layouts implemented by AdjKit, the shared PsC
 
 Adobe's specification states that adjustment-layer data matches the load file of each adjustment. AdjKit delegates those layouts to `PsAdjustmentSettingsCodec`, which is also used for the corresponding PSD adjustment blocks.
 
-The files have no identifying signature. Callers select an `AdjPresetKind`, usually from the extension with `AdjPresetKind.fromExtension`. All multibyte values are big-endian; versions and counts are unsigned 16-bit integers.
+The files have no identifying signature. Callers select an `AdjPresetKind`, usually from the extension with `AdjPresetKind.fromExtension`. All multibyte values are big-endian; versions and counts are unsigned 16-bit integers, except the Black & White descriptor version, which is 32-bit.
 
 | Kind | Extension | PSD key | Main version | Base size | Settings model |
 | --- | --- | --- | ---: | ---: | --- |
@@ -14,6 +14,7 @@ The files have no identifying signature. Callers select an `AdjPresetKind`, usua
 | Hue/Saturation | `.ahu` | `hue2` | 2 | 100 bytes | `PsHueSaturation` |
 | Selective Color | `.asv` | `selc` | 1 | 84 bytes | `PsSelectiveColor` |
 | Channel Mixer | `.cha` | `mixr` | 1 | 44 bytes | `PsChannelMixer` |
+| Black & White | `.blw` | `blwh` | 16 (32-bit) | variable | `PsBlackAndWhite` |
 
 Base sizes exclude the optional Levels CS extension and any uninterpreted trailing bytes.
 
@@ -70,6 +71,26 @@ A Channel Mixer payload starts with version 1 and a 16-bit monochrome flag. Four
 
 `PsChannelMixer.outputs` retains every row, including unused channel slots. The layout occupies 44 bytes before any trailing data and is derived from the PSD `mixr` adjustment block.
 
+## Black & White descriptor
+
+A `.blw` file is a version 16 Action Descriptor, the same one PSD `blwh` adjustment layers hold. Its integer items `Rd  `, `Yllw`, `Grn `, `Cyn `, `Bl  `, and `Mgnt` give each colour's contribution in percent (Photoshop's dialog allows −200 to 300); `useTint` and the `tintColor` object describe the optional tint; `bwPresetKind` and `blackAndWhitePresetFileName` record where the settings came from. `PsBlackAndWhite` keeps the whole descriptor, so unknown items and their order survive, and all 22 `.blw` files shipped with Photoshop CS3 to CS5 are rewritten byte for byte.
+
+## Duotone options
+
+`.ado` files and the color mode data of duotone PSD documents share one 524-byte big-endian layout, which `AdjDuotoneDecoder` and `AdjDuotoneEncoder` read and write. It is not part of Adobe's published specification; the layout below was established on the 548 duotone, tritone, and quadtone presets shipped with Photoshop CS1 to CS5, all of which round-trip byte for byte.
+
+| Field | Size | Meaning |
+| --- | ---: | --- |
+| Version | 2 bytes | 1 |
+| Ink count | 2 bytes | 1 to 4 |
+| Ink colors | 4 × 10 bytes | Swatch-file color: a color-space identifier and four 16-bit components |
+| Ink names | 4 × 64 bytes | Pascal strings; the padding keeps earlier names' bytes |
+| Transfer curves | 4 × 28 bytes | Thirteen signed values for inputs 0, 5, 10, 20, …, 90, 95, and 100%, in tenths of a percent or −1 where unset, then an override flag |
+| Dot gain | 2 bytes | Percentage |
+| Overprint colors | 11 × 10 bytes | Swatch-file colors, kept as stored |
+
+Ink colors use the swatch-file conventions: CMYK stores 0 for full ink and Lab stores signed hundredths. Matching-system inks (identifiers 3 to 6 and 10) hold their catalog code in ASCII, such as `  404C`, exposed by `AdjDuotoneInk.bookCode`; their color is only known to the matching book. `AdjDuotoneInk.outputAt` interpolates the curve between its set points. Unused ink slots and all padding are preserved.
+
 ## Compatibility modes and limits
 
 `AdjDecodeMode.tolerant` is the default. Unexpected main versions, trailing bytes, and values outside the following ranges become `AdjWarning` entries in `AdjPresetFile.warnings`:
@@ -103,7 +124,7 @@ PsdKit's corresponding adjustment classes extend these same PsCore models, so an
 
 ## Current boundaries
 
-AdjKit supports the four layouts above. Curves presets belong to [AcvKit](https://pub.dev/packages/acvkit); Black & White, Exposure, and other undocumented preset layouts are outside the current scope.
+AdjKit supports the five layouts above. Curves presets belong to [AcvKit](https://pub.dev/packages/acvkit); Exposure and other undocumented preset layouts are outside the current scope.
 
 The layouts follow Adobe's specification and the PSD adjustment blocks that PsdKit validates against real documents. No public `.alv`, `.ahu`, `.asv`, or `.cha` file was available to compare against; the Channel Mixer size in particular is derived from the `mixr` layout.
 

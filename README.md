@@ -4,7 +4,7 @@
 
 # AdjKit
 
-AdjKit is a pure Dart codec for Adobe Photoshop adjustment presets: Levels (`.alv`), Hue/Saturation (`.ahu`), Selective Color (`.asv`), and Channel Mixer (`.cha`). It has no Flutter or native-code dependency.
+AdjKit is a pure Dart codec for Adobe Photoshop adjustment presets: Levels (`.alv`), Hue/Saturation (`.ahu`), Selective Color (`.asv`), Channel Mixer (`.cha`), and Black & White (`.blw`), plus Duotone Options (`.ado`). It has no Flutter or native-code dependency.
 
 ## Supported data
 
@@ -12,7 +12,9 @@ AdjKit is a pure Dart codec for Adobe Photoshop adjustment presets: Levels (`.al
 - Hue/Saturation (`.ahu`) version 2 with colorization, master settings, and six editable color ranges.
 - Selective Color (`.asv`) version 1 with relative or absolute corrections and all ten records, including the reserved first record.
 - Channel Mixer (`.cha`) version 1 with monochrome mode, four output rows, source-channel percentages, and constants.
-- Shared `PsLevels`, `PsHueSaturation`, `PsSelectiveColor`, and `PsChannelMixer` settings, also used by PsdKit.
+- Black & White (`.blw`), a version 16 Action Descriptor with six colour contributions, the optional tint, and the preset kind; unknown descriptor items round-trip.
+- Duotone Options (`.ado`) and duotone PSD color mode data: one to four inks with their colors or matching-system catalog codes, transfer curves, dot gain, and overprint colors, through `AdjDuotoneDecoder` and `AdjDuotoneEncoder`.
+- Shared `PsLevels`, `PsHueSaturation`, `PsSelectiveColor`, `PsChannelMixer`, and `PsBlackAndWhite` settings from pscore.
 - Strict and tolerant decoding with a configurable file-size limit, compatibility warnings, and retained trailing bytes.
 - Encoding from settings and reusable `dart:convert` codecs and converters.
 
@@ -105,7 +107,7 @@ PsdKit's `PsdLevelsAdjustment`, `PsdHueSaturationAdjustment`, `PsdSelectiveColor
 
 ## Scope
 
-AdjKit reads and writes presets but does not apply adjustments to pixels. Curves presets (`.acv`) have their own layout and are handled by [AcvKit](https://pub.dev/packages/acvkit). Black & White, Exposure, and other undocumented preset layouts are not supported.
+AdjKit reads and writes presets but does not apply adjustments to pixels. Curves presets (`.acv`) have their own layout and are handled by [AcvKit](https://pub.dev/packages/acvkit). Exposure and other undocumented preset layouts are not supported.
 
 The layouts follow Adobe's specification and the shared PSD adjustment codec. Standalone Photoshop preset samples have not yet been used to verify compatibility; the Channel Mixer layout is derived from the PSD `mixr` block.
 

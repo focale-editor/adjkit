@@ -93,4 +93,73 @@ void main() {
       check(() => AdjEncoder.encode(PsSelectiveColor(corrections: const []))).throws<AdjWriteException>();
     });
   });
+
+  group('black and white', () {
+    test('reads and writes a .blw descriptor preset', () {
+      final Uint8List bytes = AdjEncoder.encode(PsBlackAndWhite.create(red: 110, blue: -50, presetKind: 3));
+
+      final AdjPresetFile preset = AdjDecoder.decode(bytes, kind: AdjPresetKind.fromExtension('blw')!);
+
+      check(preset.kind).equals(AdjPresetKind.blackAndWhite);
+      check(preset.warnings).isEmpty();
+      final PsBlackAndWhite settings = preset.settings as PsBlackAndWhite;
+      check([settings.red, settings.blue, settings.presetKind]).deepEquals([110, -50, 3]);
+      check(AdjEncoder.encode(settings)).deepEquals(bytes);
+    });
+
+    test('flags contributions outside the dialog range and rejects truncated files', () {
+      final Uint8List bytes = AdjEncoder.encode(PsBlackAndWhite.create(green: 400));
+
+      check(AdjDecoder.decode(bytes, kind: AdjPresetKind.blackAndWhite).warnings).length.equals(1);
+      check(() => AdjDecoder.decode(Uint8List.sublistView(bytes, 0, 30), kind: AdjPresetKind.blackAndWhite)).throws<AdjFormatException>();
+    });
+  });
+
+  group('duotone', () {
+    test('creates, writes, and reads back a duotone specification', () {
+      final AdjDuotoneFile source = AdjDuotoneFile.create(
+        inks: [
+          AdjDuotoneInk.create(name: 'Black', color: PsColor.cmyk(cyan: 0, magenta: 0, yellow: 0, black: 100)),
+          AdjDuotoneInk.create(name: 'Cyan', color: PsColor.cmyk(cyan: 100, magenta: 0, yellow: 0, black: 0), transfer: [0, -1, -1, -1, -1, -1, 500, -1, -1, -1, -1, -1, 800]),
+        ],
+      );
+
+      final Uint8List bytes = AdjDuotoneEncoder.encode(source);
+      final AdjDuotoneFile decoded = AdjDuotoneDecoder.decode(bytes, options: const AdjDecodeOptions(mode: AdjDecodeMode.strict));
+
+      check(bytes).length.equals(524);
+      check(decoded.inkCount).equals(2);
+      check(decoded.activeInks.map((ink) => ink.name)).deepEquals(['Black', 'Cyan']);
+      check(decoded.activeInks.first.color!.toRgb()!.red).isCloseTo(0, 0.5);
+      check(decoded.activeInks.last.color!.toRgb()!.red).isCloseTo(0, 0.5);
+      check(decoded.activeInks.last.color!.toRgb()!.blue).isCloseTo(255, 0.5);
+      check(decoded.activeInks.last.outputAt(0.25)).isCloseTo(0.25, 1e-9);
+      check(decoded.activeInks.last.outputAt(0.75)).isCloseTo(0.65, 1e-9);
+      check(AdjDuotoneEncoder.encode(decoded)).deepEquals(bytes);
+    });
+
+    test('exposes the catalog code of a matching-system ink', () {
+      final AdjDuotoneInk ink = AdjDuotoneInk(
+        colorSpaceId: 3,
+        components: const [0x2020, 0x3430, 0x3443, 0],
+        nameField: Uint8List(AdjDuotoneInk.nameFieldBytes),
+        transfer: const [0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, 1000],
+      );
+
+      check(ink.color).isNull();
+      check(ink.bookCode).equals('404C');
+    });
+
+    test('rejects truncated files and impossible ink counts', () {
+      final Uint8List bytes = AdjDuotoneEncoder.encode(
+        AdjDuotoneFile.create(
+          inks: [AdjDuotoneInk.create(name: 'Black', color: PsColor.grayscale(gray: 100))],
+        ),
+      );
+      final Uint8List fiveInks = Uint8List.fromList(bytes)..[3] = 5;
+
+      check(() => AdjDuotoneDecoder.decode(Uint8List.sublistView(bytes, 0, 300))).throws<AdjFormatException>();
+      check(() => AdjDuotoneDecoder.decode(fiveInks)).throws<AdjFormatException>();
+    });
+  });
 }

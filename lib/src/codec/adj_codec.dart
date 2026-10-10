@@ -5,7 +5,7 @@ import 'package:adjkit/src/model/adj_options.dart';
 import 'package:adjkit/src/model/adj_preset.dart';
 import 'package:pscore/pscore.dart';
 
-/// Decodes Photoshop `.alv`, `.ahu`, `.asv`, and `.cha` adjustment presets.
+/// Decodes Photoshop `.alv`, `.ahu`, `.asv`, `.cha`, and `.blw` adjustment presets.
 ///
 /// These files carry no signature, so the caller selects the [kind], usually
 /// from the file extension with [AdjPresetKind.fromExtension].
@@ -39,6 +39,7 @@ final class AdjDecoder extends Converter<List<int>, AdjPresetFile> {
         AdjPresetKind.hueSaturation => PsAdjustmentSettingsCodec.readHueSaturation(reader),
         AdjPresetKind.selectiveColor => PsAdjustmentSettingsCodec.readSelectiveColor(reader),
         AdjPresetKind.channelMixer => PsAdjustmentSettingsCodec.readChannelMixer(reader),
+        AdjPresetKind.blackAndWhite => PsAdjustmentSettingsCodec.readBlackAndWhite(reader),
       };
     } on PsFormatException catch (error) {
       throw AdjFormatException(message: 'Truncated ${kind.extension.toUpperCase()} preset: ${error.message}', source: bytes, offset: error.offset);
@@ -62,6 +63,7 @@ final class AdjDecoder extends Converter<List<int>, AdjPresetFile> {
       PsHueSaturation(:final int version, :final Uint8List trailingData) => (version, trailingData),
       PsSelectiveColor(:final int version, :final Uint8List trailingData) => (version, trailingData),
       PsChannelMixer(:final int version, :final Uint8List trailingData) => (version, trailingData),
+      PsBlackAndWhite(:final int version, :final Uint8List trailingData) => (version, trailingData),
     };
     bool outside(Iterable<int> values, int minimum, int maximum) => values.any((value) => value < minimum || value > maximum);
     return [
@@ -108,6 +110,9 @@ final class AdjDecoder extends Converter<List<int>, AdjPresetFile> {
             200,
           ))
             'Channel mixer values lie outside the −200–200 range',
+        ],
+        PsBlackAndWhite(:final int red, :final int yellow, :final int green, :final int cyan, :final int blue, :final int magenta) => [
+          if (outside([red, yellow, green, cyan, blue, magenta], -200, 300)) 'Black and white contributions lie outside the −200–300 range',
         ],
       },
     ];

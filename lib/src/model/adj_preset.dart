@@ -13,7 +13,10 @@ enum AdjPresetKind {
   selectiveColor('asv', 1),
 
   /// Channel Mixer, saved as `.cha`.
-  channelMixer('cha', 1);
+  channelMixer('cha', 1),
+
+  /// Black & White, saved as `.blw`; the version is the descriptor's.
+  blackAndWhite('blw', 16);
 
   /// File extension without a leading dot.
   final String extension;
@@ -36,6 +39,7 @@ enum AdjPresetKind {
     PsHueSaturation() => hueSaturation,
     PsSelectiveColor() => selectiveColor,
     PsChannelMixer() => channelMixer,
+    PsBlackAndWhite() => blackAndWhite,
   };
 }
 
